@@ -18,7 +18,7 @@ let numero = "";
 async function main() {
   console.clear();
   console.log(chalk.cyanBright.bold("══════════════════════════════"));
-  console.log(chalk.magentaBright.bold("       MaiBot v1.0"));
+  console.log(chalk.magentaBright.bold("       KTR Bot v1.0"));
   console.log(chalk.cyanBright.bold("══════════════════════════════"));
 
   if (!fs.existsSync(credsPath)) {
