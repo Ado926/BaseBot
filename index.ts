@@ -16,7 +16,7 @@ let numero = "";
 async function main() {
   console.clear();
   console.log(chalk.cyanBright.bold("══════════════════════════════"));
-  console.log(chalk.magentaBright.bold("       InfinityBot v1.0"));
+  console.log(chalk.magentaBright.bold("      MiniBot v1.0"));
   console.log(chalk.cyanBright.bold("══════════════════════════════"));
   console.log(chalk.green("✅ PostgreSQL conectado"));
 
