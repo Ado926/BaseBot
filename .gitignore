@@ -12,6 +12,6 @@ creds.json
 # Logs
 *.log
 
-# Archivos temporales de descarga
+# Archivos temporales de descarga 👻
 *.mp3
 *.webp
