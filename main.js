@@ -268,56 +268,44 @@ Enviando video, un momento…
 }
 
 case "tiktok": {
-  const fetch = (await import('node-fetch')).default;
-
-  // Obtener el texto del mensaje
-  const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-  // Extraer el link después del comando
-  const argsText = text.split(' ').slice(1).join(' ').trim();
-
-  if (!argsText) {
-    await sock.sendMessage(msg.key.remoteJid, {
-      text: '📌 Por favor, envía el enlace del video de TikTok.\nEjemplo:\n.tiktok https://www.tiktok.com/@usuario/video/1234567890'
-    }, { quoted: msg });
-    break;
-  }
-
   try {
-    const apiURL = `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(argsText)}`;
-    const res = await fetch(apiURL);
+    const fg = (await import('api-dylux')).default;
+    const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+    const argsText = text.split(' ').slice(1).join(' ').trim();
 
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-    const json = await res.json();
-
-    // Validar que la respuesta tenga el video y la URL sin marca de agua
-    if (!json || !json.video || !Array.isArray(json.video) || json.video.length === 0) {
-      await sock.sendMessage(msg.key.remoteJid, { text: '❌ No se pudo obtener el video de TikTok.' }, { quoted: msg });
+    if (!argsText) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: '🥀 Ingresa un enlace válido de TikTok.\nEjemplo:\n.tiktok https://vm.tiktok.com/ZMSUaxrhJ/',
+      }, { quoted: msg });
       break;
     }
 
-    // Usar URL sin marca de agua si existe, sino cualquier URL disponible
-    const videoUrl = json.video[0].url_no_watermark || json.video[0].url;
-    if (!videoUrl) {
-      await sock.sendMessage(msg.key.remoteJid, { text: '❌ No se pudo obtener el video de TikTok.' }, { quoted: msg });
+    if (!/(?:https?:\/\/)?(?:www\.)?(?:vm|vt|t)?\.?tiktok\.com\/[^\s]+/gi.test(argsText)) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: '❎ Enlace de TikTok inválido.',
+      }, { quoted: msg });
       break;
     }
 
-    const title = json.title || "Video de TikTok";
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '🕒', key: msg.key } });
 
-    await sock.sendMessage(msg.key.remoteJid, { text: `🎬 Descargando: ${title}` }, { quoted: msg });
+    const data = await fg.tiktok(argsText);
+    const { title, play, duration, author } = data.result;
 
-    // Enviar video vía URL
+    const caption = `乂 *TikTok Download*\n\n👤 *Autor:* ${author.nickname}\n📌 *Título:* ${title}\n⏱️ *Duración:* ${duration}`;
+
     await sock.sendMessage(msg.key.remoteJid, {
-      video: { url: videoUrl },
+      video: { url: play },
       mimetype: 'video/mp4',
-      fileName: `${title}.mp4`
+      fileName: 'tiktok.mp4',
+      caption
     }, { quoted: msg });
 
-  } catch (error) {
-    console.error('Error en TikTok:', error);
+    await sock.sendMessage(msg.key.remoteJid, { react: { text: '✅', key: msg.key } });
+  } catch (e) {
+    console.error(e);
     await sock.sendMessage(msg.key.remoteJid, {
-      text: '❌ Error al descargar el video de TikTok.'
+      text: `❌ *Error:* ${e.message}`,
     }, { quoted: msg });
   }
   break;
