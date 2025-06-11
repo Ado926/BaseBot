@@ -71,7 +71,20 @@ export default async function comandos(sock, msg, cmd, args) {
         { quoted: msg }
       );
       break;
-
+    case "gitpull":
+  exec("git pull", (error, stdout, stderr) => {
+    if (error) {
+      sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al hacer git pull:\n${error.message}` }, { quoted: msg });
+      return;
+    }
+    if (stderr) {
+      sock.sendMessage(msg.key.remoteJid, { text: `⚠ Advertencia al hacer git pull:\n${stderr}` }, { quoted: msg });
+      return;
+    }
+    sock.sendMessage(msg.key.remoteJid, { text: `✅ Git pull exitoso:\n${stdout}` }, { quoted: msg });
+  });
+  break;
+      
     case "descargar":
       await sock.sendMessage(
         msg.key.remoteJid,
