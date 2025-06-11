@@ -4,8 +4,8 @@ import chalk from "chalk";
 import readlineSync from "readline-sync";
 import fs from "fs";
 import pino from "pino";
-import comandos from "./main.js"; // Tu función principal con switch(cmd)
-import config from "./config.js"; // Config con prefijo
+import comandos from "./main.js";
+import config from "./config.js";
 
 const sessionFolder = "./session";
 const credsPath = `${sessionFolder}/creds.json`;
@@ -40,7 +40,7 @@ async function iniciarBot() {
   const { state, saveCreds } = await baileys.useMultiFileAuthState("session");
   const { version } = await baileys.fetchLatestBaileysVersion();
 
-  const sock = baileys.default({
+  const sock = baileys.makeWASocket({
     version,
     printQRInTerminal: !usarCodigo && !fs.existsSync(credsPath),
     logger: pino({ level: "silent" }),
@@ -76,22 +76,17 @@ async function iniciarBot() {
       if (!msg.message || msg.key.fromMe) continue;
 
       const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-      if (!texto) continue;
-
-      // Mostrar mensaje recibido en consola
-      console.log(`[📩] ${msg.key.remoteJid} > ${texto}`);
-
-      if (!texto.startsWith(config.prefijo)) continue;
+      if (!texto || !texto.startsWith(config.prefijo)) continue;
 
       const [cmd, ...args] = texto.slice(config.prefijo.length).trim().split(/\s+/);
-      const comando = cmd.toLowerCase();
 
-      // Llamar a la función comandos() del main.js
+      console.log(chalk.blueBright(`[MSG] ${msg.key.remoteJid}: ${texto}`));
+
       try {
-        await comandos(sock, msg, comando, args);
+        await comandos(sock, msg, cmd.toLowerCase(), args);
       } catch (e) {
-        console.log(chalk.red("[❌ ERROR AL EJECUTAR COMANDO]"), e);
-        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Ocurrió un error al ejecutar el comando." }, { quoted: msg });
+        console.log(chalk.red("❌ Error al ejecutar comando:"), e);
+        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Error ejecutando el comando." }, { quoted: msg });
       }
     }
   });
