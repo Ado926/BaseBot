@@ -82,67 +82,28 @@ case "menu":
   );
   break;
 
-case "ytmp4": {
-  // Extraemos el texto que viene después del comando
-  const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim().split(" ").slice(1).join(" ");
-
-  if (!text) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `🌸 Uso correcto:\n!ytmp4 <URL de YouTube>` }, { quoted: msg });
-    break;
-  }
-
-  if (!ytdl.validateURL(text)) {
-    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ URL de YouTube inválida." }, { quoted: msg });
-    break;
-  }
-
-  await sock.sendMessage(msg.key.remoteJid, { text: "⏳ Descargando video, espera un momento..." }, { quoted: msg });
-
-  try {
-    const info = await ytdl.getInfo(text);
-    const title = info.videoDetails.title.replace(/[\\/:"*?<>|]+/g, "");
-
-    const format = ytdl.chooseFormat(info.formats, { quality: "highest", filter: "audioandvideo" });
-    if (!format || !format.url) throw new Error("No se encontró formato válido con audio y video.");
-
-    const response = await fetch(format.url);
-    if (!response.ok) throw new Error("Error descargando el video");
-
-    const buffer = await response.arrayBuffer();
-
-    await sock.sendMessage(
-      msg.key.remoteJid,
-      {
-        video: Buffer.from(buffer),
-        mimetype: "video/mp4",
-        fileName: `${title}.mp4`,
-        caption: `🌸 Aquí tienes tu video: ${title}`,
-      },
-      { quoted: msg }
-    );
-  } catch (error) {
-    await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al descargar el video:\n${error.message}` }, { quoted: msg });
-  }
-
-  break;
-}
       
-      case 'update':
+ case 'update':
 case 'actualizar': {
   await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Actualizando el bot desde GitHub...' }, { quoted: msg });
 
-  exec('git pull', (err, stdout, stderr) => {
+  exec('git pull', async (err, stdout, stderr) => {
     if (err) {
-      sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al actualizar:\n${err.message}` }, { quoted: msg });
+      await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al actualizar:\n${err.message}` }, { quoted: msg });
       return;
     }
 
     if (stderr) console.warn('⚠️ Advertencia durante la actualización:\n', stderr);
 
     if (stdout.includes('Already up to date.')) {
-      sock.sendMessage(msg.key.remoteJid, { text: '✅ El bot ya está actualizado.' }, { quoted: msg });
+      await sock.sendMessage(msg.key.remoteJid, { text: '✅ El bot ya está actualizado.' }, { quoted: msg });
     } else {
-      sock.sendMessage(msg.key.remoteJid, { text: `✅ Actualización realizada con éxito:\n\n${stdout}` }, { quoted: msg });
+      await sock.sendMessage(msg.key.remoteJid, { text: `✅ Actualización realizada con éxito:\n\n${stdout}` }, { quoted: msg });
+      await sock.sendMessage(msg.key.remoteJid, { text: '♻️ Reiniciando el bot para aplicar cambios...' }, { quoted: msg });
+
+      setTimeout(() => {
+        process.exit(0);
+      }, 3000);
     }
   });
   break;
