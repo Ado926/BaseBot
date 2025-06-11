@@ -49,13 +49,12 @@ npm install
 # 4. Inicia el bot
 npm install
 ```
-
+## 👤 O simplemente haz un fork.
 ---
 
 ## 💡 Buenas prácticas
 
 - **Mantén tu bot actualizado**: usa el comando `update` para obtener mejoras directas desde GitHub.  
-- **Resguarda tus tokens y datos sensibles** en `.env`, nunca los subas a repositorios públicos.  
 - **Extiende los comandos fácilmente:** el código está documentado para agregar nuevas funcionalidades sin dolor.  
 - **Monitorea el rendimiento** y logs para anticipar errores y optimizar el bot.
 
