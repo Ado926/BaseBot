@@ -266,6 +266,51 @@ Enviando video, un momento…
 
   break;
 }
+
+case "tiktok": {
+  const fetch = (await import('node-fetch')).default;
+
+  const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+  const argsText = text.split(' ').slice(1).join(' ').trim();
+
+  if (!argsText) {
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: '📌 Por favor, envía el enlace del video de TikTok.\nEjemplo:\n.tiktok https://www.tiktok.com/@usuario/video/1234567890'
+    }, { quoted: msg });
+    break;
+  }
+
+  try {
+    // API para descargar TikTok (puedes cambiar por otra si prefieres)
+    const apiURL = `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(argsText)}`;
+    const res = await fetch(apiURL);
+    const json = await res.json();
+
+    if (!json || !json.video || !json.video[0]) {
+      await sock.sendMessage(msg.key.remoteJid, { text: '❌ No se pudo obtener el video de TikTok.' }, { quoted: msg });
+      break;
+    }
+
+    const videoUrl = json.video[0].url_no_watermark || json.video[0].url; // Sin marca de agua si disponible
+    const title = json.title || "Video de TikTok";
+
+    await sock.sendMessage(msg.key.remoteJid, { text: `🎬 Descargando: ${title}` }, { quoted: msg });
+
+    // Envía el video
+    await sock.sendMessage(msg.key.remoteJid, {
+      video: { url: videoUrl },
+      mimetype: 'video/mp4',
+      fileName: `${title}.mp4`
+    }, { quoted: msg });
+
+  } catch (error) {
+    console.error(error);
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: '❌ Error al descargar el video de TikTok.'
+    }, { quoted: msg });
+  }
+  break;
+}
     
     case "play":
       if (!args.length) {
