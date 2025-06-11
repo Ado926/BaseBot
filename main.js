@@ -198,7 +198,9 @@ case 'playmp4': {
   const searchAPI = decryptBase64('aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L3NlYXJjaF95b3V0dWJlP3F1ZXJ5PQ==');
   const downloadAPI = decryptBase64('aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L2Rvd25sb2FkX3ZpZGVvP3VybD0=');
 
-  const text = msg.body?.split(' ').slice(1).join(' ').trim();
+  const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+  const text = body.slice(body.indexOf(' ') + 1).trim();
+
   if (!text) {
     await sock.sendMessage(msg.key.remoteJid, {
       text: '🔍 *Ingresa el nombre del video.*\n\n📌 Ejemplo:\n.play2 Usewa Ado'
@@ -262,7 +264,8 @@ Enviando video, un momento… (˶˃ ᵕ ˂˶)
   }
 
   break;
-}    
+}
+    
     case "play":
       if (!args.length) {
         await sock.sendMessage(
