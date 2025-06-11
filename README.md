@@ -64,7 +64,7 @@ npm install
 
 ## 🙌 Créditos
 
-**Michi Base Bot** fue creado con ❤️ por [Ado926](https://github.com/Ado926), y testeado por jules [ Bot ] de google.
+**Michi Base Bot** fue creado con ❤️ por [Ado926](https://github.com/Ado926), y testeado por jules [ Bot ] de google [https://github.com/apps/google-labs-jules].
 
 Este proyecto está inspirado en las mejores prácticas y busca ser un estándar para bots WhatsApp base en Node.js.
 
