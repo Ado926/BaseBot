@@ -62,3 +62,6 @@ npm install
 
 # Inicia el bot
 npm start
+
+```
+> O simplemente haz un fork y listo 👻
