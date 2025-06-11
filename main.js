@@ -82,7 +82,10 @@ case "menu":
   );
   break;
 
-case "ytmp4": {
+case 'ytmp4': {
+  // Extraer el texto después del comando
+  const text = (m.text || '').trim().split(' ').slice(1).join(' ')
+  
   if (!text) return conn.reply(m.chat, `🌸 Uso correcto:\n${usedPrefix}ytmp4 <URL de YouTube>`, m)
 
   if (!ytdl.validateURL(text)) {
@@ -97,18 +100,15 @@ case "ytmp4": {
     const info = await ytdl.getInfo(text)
     const title = info.videoDetails.title.replace(/[\\/:"*?<>|]+/g, '') // limpiar título
 
-    // Obtener el formato con audio + video mejor disponible
     const format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'audioandvideo' })
 
     if (!format || !format.url) throw new Error('No se encontró formato válido con audio y video.')
 
-    // Descargar video como buffer
     const response = await fetch(format.url)
     if (!response.ok) throw new Error('Error descargando el video')
 
     const buffer = await response.arrayBuffer()
 
-    // Enviar archivo
     await conn.sendFile(
       m.chat,
       Buffer.from(buffer),
