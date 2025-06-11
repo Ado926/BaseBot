@@ -29,6 +29,7 @@ Diseñado para desarrolladores que quieren un punto de partida eficiente y modul
 | `play`          | Reproduce música desde una URL o palabra clave.|
 | `play2`         | Alternativa para reproducir música con otro método. |
 | `tiktok <URL>`  | Descarga videos de TikTok mediante URL.        |
+| `menu`  | Comandos.        |
 
 ---
 
