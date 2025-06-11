@@ -1,0 +1,17 @@
+# Dependencias
+node_modules/
+
+# Archivos de sesión de Baileys
+session/
+*.session.json
+creds.json
+
+# Archivos de entorno (si se usan)
+.env
+
+# Logs
+*.log
+
+# Archivos temporales de descarga
+*.mp3
+*.webp
