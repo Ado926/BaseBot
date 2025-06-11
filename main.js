@@ -334,7 +334,190 @@ case "tiktok": {
   }
   break;
 }
-    
+    // Objeto para guardar configuraciones por grupo (mejor usar DB o JSON persistente)
+const groupSettings = {};
+
+// Función para manejar comandos
+async function handleCommand({
+  command,
+  args,
+  isGroup,
+  isAdmin,
+  isBotAdmin,
+  groupId,
+  reply,
+  mentioned,
+  senderId,
+  setGroupDescription,
+  setGroupName,
+  kickUserFromGroup,
+  getGroupName,
+  messageBody,
+  isMessageFromAdmin,
+}) {
+  switch (command) {
+    case 'antilink':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para activar antilink.');
+      if (!args[0]) return reply('📌 Uso: #antilink activar | desactivar');
+
+      if (!groupSettings[groupId]) groupSettings[groupId] = {};
+      if (args[0].toLowerCase() === 'activar') {
+        groupSettings[groupId].antilink = true;
+        reply('✅ AntiLink activado en este grupo.');
+      } else if (args[0].toLowerCase() === 'desactivar') {
+        groupSettings[groupId].antilink = false;
+        reply('⚠️ AntiLink desactivado en este grupo.');
+      } else {
+        reply('❌ Parámetro inválido, usa activar o desactivar.');
+      }
+      break;
+
+    case 'bienvenida':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para configurar la bienvenida.');
+      if (!args[0]) return reply('📌 Uso: #bienvenida activar | desactivar');
+
+      if (!groupSettings[groupId]) groupSettings[groupId] = {};
+      if (args[0].toLowerCase() === 'activar') {
+        groupSettings[groupId].welcome = true;
+        reply('👋 Mensajes de bienvenida activados.');
+      } else if (args[0].toLowerCase() === 'desactivar') {
+        groupSettings[groupId].welcome = false;
+        reply('👋 Mensajes de bienvenida desactivados.');
+      } else {
+        reply('❌ Parámetro inválido, usa activar o desactivar.');
+      }
+      break;
+
+    case 'despedida':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para configurar la despedida.');
+      if (!args[0]) return reply('📌 Uso: #despedida activar | desactivar');
+
+      if (!groupSettings[groupId]) groupSettings[groupId] = {};
+      if (args[0].toLowerCase() === 'activar') {
+        groupSettings[groupId].goodbye = true;
+        reply('👋 Mensajes de despedida activados.');
+      } else if (args[0].toLowerCase() === 'desactivar') {
+        groupSettings[groupId].goodbye = false;
+        reply('👋 Mensajes de despedida desactivados.');
+      } else {
+        reply('❌ Parámetro inválido, usa activar o desactivar.');
+      }
+      break;
+
+    case 'kick':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isAdmin) return reply('⚠️ Solo administradores pueden expulsar.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para expulsar.');
+      if (!mentioned.length) return reply('📌 Menciona a alguien para expulsar.');
+
+      for (const user of mentioned) {
+        try {
+          await kickUserFromGroup(groupId, user);
+        } catch {
+          reply(`❌ No pude expulsar a @${user.split('@')[0]}.`);
+        }
+      }
+      reply(`🚪 Usuario(s) expulsado(s) con éxito.`);
+      break;
+
+    case 'kicknum':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isAdmin) return reply('⚠️ Solo administradores pueden expulsar.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para expulsar.');
+      if (!args[0]) return reply('📌 Uso: #kicknum +[código_país][número]');
+
+      const prefixMatch = args[0].match(/^\+?\d+/);
+      if (!prefixMatch) return reply('❌ Prefijo inválido.');
+      const prefix = prefixMatch[0];
+
+      reply(`🚪 Eliminando a los números con prefijo ${prefix}...`);
+
+      const numberToKick = args[0].replace(/\D/g, '');
+      if (!numberToKick) return reply('❌ Número inválido.');
+
+      try {
+        await kickUserFromGroup(groupId, numberToKick + '@s.whatsapp.net');
+        reply(`✅ Número ${args[0]} expulsado con éxito.`);
+      } catch {
+        reply('❌ No pude expulsar ese número. Revisa que el número esté en el grupo.');
+      }
+      break;
+
+    case 'setdesc':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isAdmin) return reply('⚠️ Solo administradores pueden cambiar la descripción.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para cambiar la descripción.');
+      if (!args.length) return reply('📌 Uso: #setdesc [nueva descripción]');
+
+      const newDesc = args.join(' ');
+      await setGroupDescription(groupId, newDesc);
+      reply('📝 Descripción del grupo actualizada.');
+      break;
+
+    case 'setname':
+      if (!isGroup) return reply('❌ Este comando solo funciona en grupos.');
+      if (!isAdmin) return reply('⚠️ Solo administradores pueden cambiar el nombre.');
+      if (!isBotAdmin) return reply('⚠️ Necesito ser administrador para cambiar el nombre.');
+      if (!args.length) return reply('📌 Uso: #setname [nuevo nombre]');
+
+      const newName = args.join(' ');
+      await setGroupName(groupId, newName);
+      reply('✏️ Nombre del grupo actualizado.');
+      break;
+
+    default:
+      reply('❓ Comando no reconocido. Usa #help para ver comandos disponibles.');
+  }
+
+  // --- Detección automática de links para antilink ---
+
+  if (isGroup && groupSettings[groupId]?.antilink) {
+    const linkRegex = /(https?:\/\/|www\.)\S+/i;
+
+    if (linkRegex.test(messageBody)) {
+      if (!isBotAdmin) {
+        reply('⚠️ El antilink está activo, pero no soy admin para expulsar.');
+        return;
+      }
+      if (isMessageFromAdmin) {
+        reply('⚠️ Eres admin, no puedo expulsarte por enviar links.');
+        return;
+      }
+      reply(`🚫 AntiLink detectado, serás eliminado del grupo.`);
+      await kickUserFromGroup(groupId, senderId);
+    }
+  }
+}
+
+// --- Eventos de bienvenida y despedida ---
+
+async function onUserJoin({
+  groupId,
+  userId,
+  sendMessage,
+  getGroupName,
+}) {
+  if (!groupSettings[groupId]?.welcome) return;
+
+  const groupName = await getGroupName(groupId);
+  await sendMessage(groupId, `👋 Holaa @${userId.split('@')[0]}, bienvenido(a) a ${groupName} 🎉`, { mentions: [userId] });
+}
+
+async function onUserLeave({
+  groupId,
+  userId,
+  sendMessage,
+  getGroupName,
+}) {
+  if (!groupSettings[groupId]?.goodbye) return;
+
+  const groupName = await getGroupName(groupId);
+  await sendMessage(groupId, `👋 @${userId.split('@')[0]} se fue del grupo ${groupName}, lo extrañaremos 😢`, { mentions: [userId] });
+}
+
     case "play":
       if (!args.length) {
         await sock.sendMessage(
