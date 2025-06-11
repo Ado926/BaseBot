@@ -1,3 +1,5 @@
+import path from "path";
+import ffmpeg from "fluent-ffmpeg";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import fs from "fs";
 import yts from "yt-search";
@@ -77,63 +79,87 @@ export default async function comandos(sock, msg, cmd, args) {
         { quoted: msg }
       );
       break;
+      
+case "sticker":
+  try {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-    case "sticker":
-      try {
-        const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quoted || (!quoted.imageMessage && !quoted.videoMessage)) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "📌 Responde a una *imagen* o *video corto* para convertirlo en sticker." },
+        { quoted: msg }
+      );
+      return;
+    }
 
-        if (!quoted || (!quoted.imageMessage && !quoted.videoMessage)) {
-          await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: "📌 Responde a una *imagen* o *video corto* para convertirlo en sticker." },
-            { quoted: msg }
-          );
-          return;
-        }
-
-        const mediaType = quoted.imageMessage ? "imageMessage" : "videoMessage";
-        const quotedMsg = {
-          key: {
-            remoteJid: msg.key.remoteJid,
-            id: msg.message.extendedTextMessage.contextInfo.stanzaId,
-            fromMe: false,
-            participant: msg.message.extendedTextMessage.contextInfo.participant,
-          },
-          message: {
-            [mediaType]: quoted[mediaType]
-          }
-        };
-
-        const mediaBuffer = await downloadMediaMessage(
-          quotedMsg,
-          "buffer",
-          {},
-          {
-            logger: console,
-            reuploadRequest: sock?.reuploadRequest,
-            getAuth: sock?.getMessage,
-          }
-        );
-
-        await sock.sendMessage(
-          msg.key.remoteJid,
-          {
-            sticker: mediaBuffer,
-            packname: "MaiBot 🌸",
-            author: "by Wirk"
-          },
-          { quoted: msg }
-        );
-      } catch (e) {
-        console.error(e);
-        await sock.sendMessage(
-          msg.key.remoteJid,
-          { text: "❌ Ocurrió un error al crear el sticker." },
-          { quoted: msg }
-        );
+    const mediaType = quoted.imageMessage ? "imageMessage" : "videoMessage";
+    const quotedMsg = {
+      key: {
+        remoteJid: msg.key.remoteJid,
+        id: msg.message.extendedTextMessage.contextInfo.stanzaId,
+        fromMe: false,
+        participant: msg.message.extendedTextMessage.contextInfo.participant,
+      },
+      message: {
+        [mediaType]: quoted[mediaType]
       }
-      break;
+    };
 
+    const buffer = await downloadMediaMessage(
+      quotedMsg,
+      "buffer",
+      {},
+      { logger: console, reuploadRequest: sock.reuploadRequest, getAuth: () => sock.authState }
+    );
+
+    const inputPath = `./tmp/input_${Date.now()}.${mediaType === "imageMessage" ? "jpg" : "mp4"}`;
+    const outputPath = `./tmp/output_${Date.now()}.webp`;
+
+    fs.mkdirSync("./tmp", { recursive: true });
+    fs.writeFileSync(inputPath, buffer);
+
+    await new Promise((resolve, reject) => {
+      let command = ffmpeg(inputPath)
+        .on("end", resolve)
+        .on("error", reject)
+        .outputOptions([
+          "-vcodec", "libwebp",
+          "-vf", "scale=512:512:force_original_aspect_ratio=decrease,fps=15",
+          "-lossless", "1",
+          "-compression_level", "6",
+          "-preset", "default",
+          "-loop", "0",
+          "-an", "-vsync", "0"
+        ])
+        .toFormat("webp")
+        .save(outputPath);
+    });
+
+    const stickerBuffer = fs.readFileSync(outputPath);
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      {
+        sticker: stickerBuffer,
+        packname: "Bot 🌸",
+        author: "by Wirk"
+      },
+      { quoted: msg }
+    );
+
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(outputPath);
+  } catch (error) {
+    console.error(error);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Error al crear el sticker. Asegúrate de responder a una imagen o video corto." },
+      { quoted: msg }
+    );
+  }
+  break;
+      
     case "play":
       if (!args.length) {
         await sock.sendMessage(
