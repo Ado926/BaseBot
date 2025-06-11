@@ -82,53 +82,50 @@ case "menu":
   );
   break;
 
-case 'ytmp4': {
-  // Extraer el texto después del comando
-  const text = (m.text || '').trim().split(' ').slice(1).join(' ')
-  
-  if (!text) return conn.reply(m.chat, `🌸 Uso correcto:\n${usedPrefix}ytmp4 <URL de YouTube>`, m)
+case "ytmp4": {
+  // Extraemos el texto que viene después del comando
+  const text = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim().split(" ").slice(1).join(" ");
+
+  if (!text) {
+    await sock.sendMessage(msg.key.remoteJid, { text: `🌸 Uso correcto:\n!ytmp4 <URL de YouTube>` }, { quoted: msg });
+    break;
+  }
 
   if (!ytdl.validateURL(text)) {
-    await m.react('❌')
-    return conn.reply(m.chat, '⚠️ URL de YouTube inválida.', m)
+    await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ URL de YouTube inválida." }, { quoted: msg });
+    break;
   }
 
-  await m.react('⏳')
-  await conn.reply(m.chat, '🌸 Descargando video, espera un momento...', m)
+  await sock.sendMessage(msg.key.remoteJid, { text: "⏳ Descargando video, espera un momento..." }, { quoted: msg });
 
   try {
-    const info = await ytdl.getInfo(text)
-    const title = info.videoDetails.title.replace(/[\\/:"*?<>|]+/g, '') // limpiar título
+    const info = await ytdl.getInfo(text);
+    const title = info.videoDetails.title.replace(/[\\/:"*?<>|]+/g, "");
 
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'audioandvideo' })
+    const format = ytdl.chooseFormat(info.formats, { quality: "highest", filter: "audioandvideo" });
+    if (!format || !format.url) throw new Error("No se encontró formato válido con audio y video.");
 
-    if (!format || !format.url) throw new Error('No se encontró formato válido con audio y video.')
+    const response = await fetch(format.url);
+    if (!response.ok) throw new Error("Error descargando el video");
 
-    const response = await fetch(format.url)
-    if (!response.ok) throw new Error('Error descargando el video')
+    const buffer = await response.arrayBuffer();
 
-    const buffer = await response.arrayBuffer()
-
-    await conn.sendFile(
-      m.chat,
-      Buffer.from(buffer),
-      `${title}.mp4`,
-      `🌸 Aquí tienes tu video: ${title}`,
-      m,
-      null,
+    await sock.sendMessage(
+      msg.key.remoteJid,
       {
-        mimetype: 'video/mp4',
-        asDocument: false,
-      }
-    )
-
-    await m.react('✅')
+        video: Buffer.from(buffer),
+        mimetype: "video/mp4",
+        fileName: `${title}.mp4`,
+        caption: `🌸 Aquí tienes tu video: ${title}`,
+      },
+      { quoted: msg }
+    );
   } catch (error) {
-    await m.react('❌')
-    await conn.reply(m.chat, `❌ Error al descargar el video:\n${error.message}`, m)
+    await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al descargar el video:\n${error.message}` }, { quoted: msg });
   }
+
+  break;
 }
-break;
       
       case 'update':
 case 'actualizar': {
