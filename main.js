@@ -192,63 +192,15 @@ case 'play2':
 case 'mp4':
 case 'ytmp4':
 case 'playmp4': {
-  if (!args[0]) return sock.sendMessage(from, { text: '🔍 Ingresa el nombre del video. Ejemplo: .play2 Usewa Ado' }, { quoted: msg });
-
-  const fetch = (await import('node-fetch')).default;
-  const ENCRYPTED_SEARCH_API = 'aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L3NlYXJjaF95b3V0dWJlP3F1ZXJ5PQ==';
-  const ENCRYPTED_DOWNLOAD_VIDEO_API = 'aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L2Rvd25sb2FkX3ZpZGVvP3VybD0=';
-
-  function decryptBase64(str) {
-    return Buffer.from(str, 'base64').toString();
-  }
-
-  try {
-    const searchAPI = decryptBase64(ENCRYPTED_SEARCH_API);
-    const downloadVideoAPI = decryptBase64(ENCRYPTED_DOWNLOAD_VIDEO_API);
-
-    const query = args.join(" ");
-    const searchRes = await fetch(`${searchAPI}${encodeURIComponent(query)}`);
-    const searchJson = await searchRes.json();
-
-    if (!searchJson.results || !searchJson.results.length) {
-      return sock.sendMessage(from, { text: '⚠️ No se encontraron resultados para tu búsqueda.' }, { quoted: msg });
-    }
-
-    const video = searchJson.results[0];
-    const thumb = video.thumbnails.find(t => t.width === 720)?.url || video.thumbnails[0]?.url;
-    const videoTitle = video.title;
-    const videoUrl = video.url;
-    const duration = Math.floor(video.duration);
-
-    const msgInfo = `
-🎬 *Título:* ${videoTitle}
-📺 *Canal:* ${video.channel}
-⏱️ *Duración:* ${duration}s
-👀 *Vistas:* ${video.views.toLocaleString()}
-🔗 *URL:* ${videoUrl}
-
-_Enviando video, un momento soy lento..._
-`.trim();
-
-    await sock.sendMessage(from, { image: { url: thumb }, caption: msgInfo }, { quoted: msg });
-
-    const downloadRes = await fetch(`${downloadVideoAPI}${encodeURIComponent(videoUrl)}`);
-    const downloadJson = await downloadRes.json();
-
-    if (!downloadJson.file_url) {
-      return sock.sendMessage(from, { text: '❌ No se pudo descargar el video.' }, { quoted: msg });
-    }
-
-    await sock.sendMessage(from, {
-      video: { url: downloadJson.file_url },
-      mimetype: 'video/mp4',
-      fileName: `${downloadJson.title}.mp4`
-    }, { quoted: msg });
-
-  } catch (e) {
-    console.error(e);
-    sock.sendMessage(from, { text: '❌ Error al procesar tu solicitud.' }, { quoted: msg });
-  }
+  import('./comandos/play2.js')
+    .then(async (module) => {
+      let handler = module.default;
+      await handler(m, { conn, text, command });
+    })
+    .catch(err => {
+      console.error(err);
+      m.reply('❌ Hubo un error al ejecutar el comando.');
+    });
   break;
 }
       
