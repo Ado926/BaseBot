@@ -1,4 +1,5 @@
 import path from "path";
+import ytdl from 'ytdl-core'
 import { exec } from "child_process";
 import ffmpeg from "fluent-ffmpeg";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
@@ -80,6 +81,54 @@ case "menu":
     { quoted: msg }
   );
   break;
+
+case "ytmp4": {
+  if (!text) return conn.reply(m.chat, `🌸 Uso correcto:\n${usedPrefix}ytmp4 <URL de YouTube>`, m)
+
+  if (!ytdl.validateURL(text)) {
+    await m.react('❌')
+    return conn.reply(m.chat, '⚠️ URL de YouTube inválida.', m)
+  }
+
+  await m.react('⏳')
+  await conn.reply(m.chat, '🌸 Descargando video, espera un momento...', m)
+
+  try {
+    const info = await ytdl.getInfo(text)
+    const title = info.videoDetails.title.replace(/[\\/:"*?<>|]+/g, '') // limpiar título
+
+    // Obtener el formato con audio + video mejor disponible
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'audioandvideo' })
+
+    if (!format || !format.url) throw new Error('No se encontró formato válido con audio y video.')
+
+    // Descargar video como buffer
+    const response = await fetch(format.url)
+    if (!response.ok) throw new Error('Error descargando el video')
+
+    const buffer = await response.arrayBuffer()
+
+    // Enviar archivo
+    await conn.sendFile(
+      m.chat,
+      Buffer.from(buffer),
+      `${title}.mp4`,
+      `🌸 Aquí tienes tu video: ${title}`,
+      m,
+      null,
+      {
+        mimetype: 'video/mp4',
+        asDocument: false,
+      }
+    )
+
+    await m.react('✅')
+  } catch (error) {
+    await m.react('❌')
+    await conn.reply(m.chat, `❌ Error al descargar el video:\n${error.message}`, m)
+  }
+}
+break;
       
       case 'update':
 case 'actualizar': {
