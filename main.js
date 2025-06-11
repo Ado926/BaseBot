@@ -270,7 +270,9 @@ Enviando video, un momento…
 case "tiktok": {
   const fetch = (await import('node-fetch')).default;
 
+  // Obtener el texto del mensaje
   const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+  // Extraer el link después del comando
   const argsText = text.split(' ').slice(1).join(' ').trim();
 
   if (!argsText) {
@@ -281,22 +283,31 @@ case "tiktok": {
   }
 
   try {
-    // API para descargar TikTok (puedes cambiar por otra si prefieres)
     const apiURL = `https://api.tikmate.app/api/lookup?url=${encodeURIComponent(argsText)}`;
     const res = await fetch(apiURL);
+
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
     const json = await res.json();
 
-    if (!json || !json.video || !json.video[0]) {
+    // Validar que la respuesta tenga el video y la URL sin marca de agua
+    if (!json || !json.video || !Array.isArray(json.video) || json.video.length === 0) {
       await sock.sendMessage(msg.key.remoteJid, { text: '❌ No se pudo obtener el video de TikTok.' }, { quoted: msg });
       break;
     }
 
-    const videoUrl = json.video[0].url_no_watermark || json.video[0].url; // Sin marca de agua si disponible
+    // Usar URL sin marca de agua si existe, sino cualquier URL disponible
+    const videoUrl = json.video[0].url_no_watermark || json.video[0].url;
+    if (!videoUrl) {
+      await sock.sendMessage(msg.key.remoteJid, { text: '❌ No se pudo obtener el video de TikTok.' }, { quoted: msg });
+      break;
+    }
+
     const title = json.title || "Video de TikTok";
 
     await sock.sendMessage(msg.key.remoteJid, { text: `🎬 Descargando: ${title}` }, { quoted: msg });
 
-    // Envía el video
+    // Enviar video vía URL
     await sock.sendMessage(msg.key.remoteJid, {
       video: { url: videoUrl },
       mimetype: 'video/mp4',
@@ -304,7 +315,7 @@ case "tiktok": {
     }, { quoted: msg });
 
   } catch (error) {
-    console.error(error);
+    console.error('Error en TikTok:', error);
     await sock.sendMessage(msg.key.remoteJid, {
       text: '❌ Error al descargar el video de TikTok.'
     }, { quoted: msg });
