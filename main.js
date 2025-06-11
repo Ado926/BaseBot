@@ -73,8 +73,60 @@ export default async function comandos(sock, msg, cmd, args) {
       break;
 
     case "sticker":
-      await sock.sendMessage(msg.key.remoteJid, { text: "Función sticker aún no implementada." }, { quoted: msg });
-      break;
+  try {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+    if (!quoted) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "📸 *Responde a una imagen o video para convertirlo en sticker.*" },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    let mime;
+    let mediaType;
+
+    if (quoted.imageMessage) {
+      mime = quoted.imageMessage.mimetype;
+      mediaType = "image";
+    } else if (quoted.videoMessage) {
+      mime = quoted.videoMessage.mimetype;
+      mediaType = "video";
+    } else {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "⚠ *Solo se permiten imágenes o videos de máximo 10 segundos.*" },
+        { quoted: msg }
+      );
+      return;
+    }
+
+    const mediaMessage = {
+      [mediaType]: quoted[`${mediaType}Message`],
+    };
+
+    const mediaBuffer = await sock.downloadMediaMessage({ message: mediaMessage });
+
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      {
+        sticker: mediaBuffer,
+        packname: "BaseBot 🌸",
+        author: "By Wirk",
+      },
+      { quoted: msg }
+    );
+  } catch (e) {
+    console.error(e);
+    await sock.sendMessage(
+      msg.key.remoteJid,
+      { text: "❌ Ocurrió un error al crear el sticker." },
+      { quoted: msg }
+    );
+  }
+  break;
 
     case "play":
       if (!args.length) {
