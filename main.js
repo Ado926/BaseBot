@@ -85,7 +85,7 @@ case "actualizar":
       sock.sendMessage(msg.key.remoteJid, { text: `⚠ Advertencia al hacer git pull:\n${stderr}` }, { quoted: msg });
       return;
     }
-    sock.sendMessage(msg.key.remoteJid, { text: `✅ Git pull exitoso:\n${stdout}` }, { quoted: msg });
+    sock.sendMessage(msg.key.remoteJid, { text: `✅ [UPD] exitosa:\n${stdout}` }, { quoted: msg });
   });
   break;
       
@@ -98,6 +98,7 @@ case "actualizar":
       break;
       
 case "sticker":
+case "s":
   try {
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
