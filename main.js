@@ -74,7 +74,7 @@ export default async function comandos(sock, msg, cmd, args) {
       await sock.sendMessage(
         msg.key.remoteJid,
         {
-          text: "📜 *Lista de comandos disponibles:*\n\n• ping\n• descargar [ en desarrollo ]\n• sticker\n• play\n• play2\n\n> 🍫 Base Bot 2025 | With Wirk 🍟"
+          text: ">⚔️ Michi Bot Base\n 📜 *Lista de comandos disponibles:*\n\n• ping\n• descargar [ en desarrollo ]\n• sticker\n• play\n• play2\n• tiktok <URL>\n\n> 🍫 Michi Base Bot 2025 | Made With Wirk 🍟"
         },
         { quoted: msg }
       );
