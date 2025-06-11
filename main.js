@@ -229,17 +229,7 @@ case "s":
             audio: Buffer.from(response.data),
             mimetype: "audio/mpeg",
             fileName: `${title}.mp3`,
-            ptt: false,
-            contextInfo: {
-              externalAdReply: {
-                title: title,
-                body: "Shadow Ultra Edited",
-                thumbnailUrl: video.thumbnail,
-                sourceUrl: url,
-                mediaType: 2,
-                renderLargerThumbnail: true,
-              }
-            }
+            ptt: false
           },
           { quoted: msg }
         );
