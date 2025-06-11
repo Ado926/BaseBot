@@ -194,12 +194,12 @@ case 'ytmp4':
 case 'playmp4': {
   import('./comandos/play2.js')
     .then(async (module) => {
-      let handler = module.default;
-      await handler(m, { conn, text, command });
+      const handler = module.default;
+      await handler(msg, { conn, text, command });
     })
     .catch(err => {
       console.error(err);
-      m.reply('❌ Hubo un error al ejecutar el comando.');
+      msg.reply('❌ Hubo un error al ejecutar el comando.');
     });
   break;
 }
