@@ -1,30 +1,27 @@
 import baileys from '@whiskeysockets/baileys';
-const {
-  default: makeWASocket,
-  DisconnectReason,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  WAMessage,
-  WASocket
-} = baileys;
-
 import pino from 'pino';
 import qrTerminal from 'qrcode-terminal';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import config from './config.js';
 import path from 'path';
-import { fileURLToPath } from 'url'; // Para obtener __dirname en ES Modules
+import { fileURLToPath } from 'url';
+
+const {
+  default: makeWASocket,
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion
+} = baileys;
 
 const SESSION_DIR = './sesion_auth/';
 const COMANDOS_DIR = './comandos';
 
-// Para obtener __dirname en ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 fs.ensureDirSync(SESSION_DIR);
-fs.ensureDirSync(COMANDOS_DIR); // Asegurar que la carpeta de comandos exista
+fs.ensureDirSync(COMANDOS_DIR);
 
 const comandos = new Map();
 
@@ -34,22 +31,19 @@ async function cargarComandos() {
 
   for (const archivo of archivosComandos) {
     try {
-      // Construir la ruta absoluta para importación dinámica
       const rutaAbsolutaComando = path.resolve(__dirname, COMANDOS_DIR, archivo);
-      // Necesitamos convertirla a file URL para import() en ES modules
       const urlComando = `file://${rutaAbsolutaComando}`;
-
       const moduloComando = await import(urlComando);
-      const comando = moduloComando.default; // Asumimos export default
+      const comando = moduloComando.default;
 
       if (comando && typeof comando.nombre === 'string' && typeof comando.ejecutar === 'function') {
         comandos.set(comando.nombre.toLowerCase(), comando);
         console.log(`Comando cargado: ${config.prefijo}${comando.nombre}`);
       } else {
-        console.warn(`El archivo ${archivo} no exporta un comando válido (falta nombre o ejecutar).`);
+        console.warn(`El archivo ${archivo} no exporta un comando válido.`);
       }
     } catch (error) {
-      console.error(`Error al cargar el comando desde ${archivo}:`, error);
+      console.error(`Error al cargar comando ${archivo}:`, error);
     }
   }
   console.log(`${comandos.size} comandos cargados.`);
@@ -57,122 +51,129 @@ async function cargarComandos() {
 
 async function iniciarBot() {
   console.log('Iniciando bot...');
-  await cargarComandos(); // Cargar comandos antes de iniciar el socket
+  await cargarComandos();
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version, isLatest } = await fetchLatestBaileysVersion();
-  console.log(`Usando Baileys v${version.join('.')}, ¿Es la última versión?: ${isLatest}`);
+  console.log(`Baileys versión: ${version.join('.')}, última versión: ${isLatest}`);
 
   const sock = makeWASocket({
     version,
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: true,
+    printQRInTerminal: false, // Lo manejamos manualmente para QR y código
     auth: state,
     browser: ['MiBot', 'Chrome', '1.0.0']
   });
 
+  // Mostrar método de conexión si no está registrado
   if (!sock.authState.creds.registered) {
-    let usarCodigoEmparejamiento = false;
     const metodo = readlineSync.question('¿Cómo deseas conectar? (1: QR, 2: Código de 8 dígitos): ');
 
-    if (metodo === '2') {
-      usarCodigoEmparejamiento = true;
-      const numeroTelefono = readlineSync.question('Por favor, ingresa tu número de WhatsApp (ej: 521XXXXXXXXXX): ');
-      if (!numeroTelefono) {
-        console.log('Número de teléfono no proporcionado. Intentando con QR.');
-        usarCodigoEmparejamiento = false;
+    if (metodo === '1') {
+      console.log('Escanea el QR que aparecerá en consola...');
+      sock.ev.on('connection.update', ({ qr }) => {
+        if (qr) qrTerminal.generate(qr, { small: true });
+      });
+    } else if (metodo === '2') {
+      const numero = readlineSync.question('Número WhatsApp con código país (ej: 521XXXXXXXXXX): ');
+      if (!numero) {
+        console.log('Número no válido. Usando QR en su lugar...');
+        sock.ev.on('connection.update', ({ qr }) => {
+          if (qr) qrTerminal.generate(qr, { small: true });
+        });
       } else {
         try {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const codigo = await sock.requestPairingCode(numeroTelefono.replace(/[^0-9]/g, ''));
-          console.log(`Tu código de emparejamiento: ${codigo}`);
+          const codigo8 = await sock.requestPairingCode(numero.replace(/\D/g, ''));
+          console.log(`Código de emparejamiento (8 dígitos): ${codigo8}`);
           console.log('Abre WhatsApp en tu teléfono > Dispositivos vinculados > Vincular un dispositivo > Vincular con número de teléfono.');
-        } catch (error) {
-          console.error('Error al solicitar el código de emparejamiento:', error);
-          console.log('Intentando con QR...');
-          usarCodigoEmparejamiento = false;
+        } catch (err) {
+          console.error('Error al solicitar código de emparejamiento:', err);
+          console.log('Usando QR en su lugar...');
+          sock.ev.on('connection.update', ({ qr }) => {
+            if (qr) qrTerminal.generate(qr, { small: true });
+          });
         }
       }
+    } else {
+      console.log('Opción no válida, mostrando QR...');
+      sock.ev.on('connection.update', ({ qr }) => {
+        if (qr) qrTerminal.generate(qr, { small: true });
+      });
     }
-    // Si no se usa código o falla, Baileys debería mostrar QR por printQRInTerminal: true
   } else {
-    console.log('Sesión encontrada. Conectando...');
+    console.log('Sesión ya autenticada. Conectando...');
   }
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', async (update) => {
+  sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
-    if (qr && !sock.authState.creds.registered) {
-      console.log('QR recibido, por favor escanéalo si no has optado por el código de 8 dígitos.');
-    }
 
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('Conexión cerrada debido a ', lastDisconnect?.error, ', reconectando: ', shouldReconnect);
+      const reason = lastDisconnect?.error?.output?.statusCode;
+      console.log('Conexión cerrada, razón:', reason);
+      const shouldReconnect = reason !== DisconnectReason.loggedOut;
       if (shouldReconnect) {
+        console.log('Reconectando...');
         iniciarBot();
       } else {
-        console.log('Desconectado. No se reconectará.');
-        // Considerar limpiar sesión si es loggedOut y se desea un inicio limpio la próxima vez
-        // if ((lastDisconnect?.error)?.output?.statusCode === DisconnectReason.loggedOut) {
-        //   fs.rmSync(SESSION_DIR, { recursive: true, force: true });
-        // }
+        console.log('Sesión cerrada por logout. Borra la sesión para reiniciar si quieres.');
       }
     } else if (connection === 'open') {
-      console.log('¡Conexión abierta! Bot en línea.');
+      console.log('Bot conectado y listo.');
       console.log(`Prefijo de comandos: ${config.prefijo}`);
     }
   });
 
   sock.ev.on('messages.upsert', async (m) => {
+    if (m.type !== 'notify') return;
+
     const msg = m.messages[0];
-    if (!msg.message || msg.key.fromMe || m.type !== 'notify') {
-      return; // Ignorar mensajes propios, vacíos o notificaciones de tipo no mensaje
+    if (!msg.message || msg.key.fromMe) return;
+
+    let texto = '';
+    const message = msg.message;
+
+    if (message.conversation) texto = message.conversation;
+    else if (message.extendedTextMessage?.text) texto = message.extendedTextMessage.text;
+    else if (message.imageMessage?.caption) texto = message.imageMessage.caption;
+    else if (message.videoMessage?.caption) texto = message.videoMessage.caption;
+
+    if (!texto.startsWith(config.prefijo)) return;
+
+    const [cmdConPrefijo, ...args] = texto.trim().split(/\s+/);
+    const cmdName = cmdConPrefijo.slice(config.prefijo.length).toLowerCase();
+
+    const comando = comandos.get(cmdName);
+    if (!comando) {
+      console.log(`Comando no encontrado: ${config.prefijo}${cmdName}`);
+      return;
     }
 
-    // Obtener el contenido del mensaje de forma robusta
-    let textoMensaje = '';
-    if (msg.message.conversation) {
-      textoMensaje = msg.message.conversation;
-    } else if (msg.message.extendedTextMessage && msg.message.extendedTextMessage.text) {
-      textoMensaje = msg.message.extendedTextMessage.text;
-    } else if (msg.message.imageMessage && msg.message.imageMessage.caption) {
-      textoMensaje = msg.message.imageMessage.caption;
-    } else if (msg.message.videoMessage && msg.message.videoMessage.caption) {
-      textoMensaje = msg.message.videoMessage.caption;
-    }
-
-    if (!textoMensaje.startsWith(config.prefijo)) {
-      return; // No es un comando
-    }
-
-    const [nombreComandoConPrefijo, ...args] = textoMensaje.trim().split(/\s+/);
-    const nombreComando = nombreComandoConPrefijo.slice(config.prefijo.length).toLowerCase();
-
-    const comando = comandos.get(nombreComando);
-
-    if (comando) {
-      console.log(`Ejecutando comando: ${config.prefijo}${comando.nombre} con args: [${args.join(', ')}]`);
+    console.log(`Ejecutando comando: ${config.prefijo}${comando.nombre} con args: [${args.join(', ')}]`);
+    try {
+      await comando.ejecutar(sock, msg, args, comandos);
+    } catch (error) {
+      console.error(`Error ejecutando comando ${config.prefijo}${comando.nombre}:`, error);
       try {
-        await comando.ejecutar(sock, msg, args, comandos);
-      } catch (error) {
-        console.error(`Error al ejecutar el comando ${config.prefijo}${comando.nombre}:`, error);
-        try {
-          await sock.sendMessage(msg.key.remoteJid, { text: `Error al ejecutar el comando: ${error.message}` }, { quoted: msg });
-        } catch (errSend) {
-          console.error('Error al enviar mensaje de error:', errSend);
-        }
+        await sock.sendMessage(msg.key.remoteJid, { text: `Error al ejecutar el comando: ${error.message}` }, { quoted: msg });
+      } catch (e) {
+        console.error('Error enviando mensaje de error:', e);
       }
-    } else {
-      // Opcional: responder si el comando no se conoce
-      // await sock.sendMessage(msg.key.remoteJid, { text: `Comando desconocido: ${config.prefijo}${nombreComando}` }, { quoted: msg });
-      console.log(`Comando no encontrado: ${config.prefijo}${nombreComando}`);
     }
   });
 
-  process.on('SIGINT', async () => { console.log('Cerrando...'); await sock.logout(); process.exit(0); });
-  process.on('SIGTERM', async () => { console.log('Cerrando...'); await sock.logout(); process.exit(0); });
+  process.on('SIGINT', async () => {
+    console.log('Cerrando bot...');
+    await sock.logout();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('Cerrando bot...');
+    await sock.logout();
+    process.exit(0);
+  });
 }
 
-iniciarBot().catch(err => console.error('Error no capturado en iniciarBot:', err));
+iniciarBot().catch(err => console.error('Error al iniciar el bot:', err));
