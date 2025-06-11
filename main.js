@@ -73,19 +73,23 @@ export default async function comandos(sock, msg, cmd, args) {
       );
       break;
       
-case "gitpull":
-case "update":
-case "actualizar":
-  exec("git pull", (error, stdout, stderr) => {
-    if (error) {
-      sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al hacer git pull:\n${error.message}` }, { quoted: msg });
+case 'update':
+case 'actualizar': {
+  await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Actualizando el bot desde GitHub...' }, { quoted: msg });
+
+  exec('git pull', (err, stdout, stderr) => {
+    if (err) {
+      sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al actualizar:\n${err.message}` }, { quoted: msg });
       return;
     }
-    if (stderr) {
-      sock.sendMessage(msg.key.remoteJid, { text: `⚠ Advertencia al hacer git pull:\n${stderr}` }, { quoted: msg });
-      return;
+
+    if (stderr) console.warn('⚠️ Advertencia durante la actualización:\n', stderr);
+
+    if (stdout.includes('Already up to date.')) {
+      sock.sendMessage(msg.key.remoteJid, { text: '✅ El bot ya está actualizado.' }, { quoted: msg });
+    } else {
+      sock.sendMessage(msg.key.remoteJid, { text: `✅ Actualización realizada con éxito:\n\n${stdout}` }, { quoted: msg });
     }
-    sock.sendMessage(msg.key.remoteJid, { text: `✅ [UPD] exitosa:\n${stdout}` }, { quoted: msg });
   });
   break;
       
