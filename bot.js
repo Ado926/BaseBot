@@ -1,10 +1,11 @@
+// bot.js
 import * as baileys from "@whiskeysockets/baileys";
 import chalk from "chalk";
 import readlineSync from "readline-sync";
 import fs from "fs";
 import pino from "pino";
-import comandos from "./main.js";  // importación por defecto del archivo main.js
-import config from "./config.js";  // importación por defecto de config.js
+import comandos from "./main.js"; // Tu función principal con switch(cmd)
+import config from "./config.js"; // Config con prefijo
 
 const sessionFolder = "./session";
 const credsPath = `${sessionFolder}/creds.json`;
@@ -39,21 +40,21 @@ async function iniciarBot() {
   const { state, saveCreds } = await baileys.useMultiFileAuthState("session");
   const { version } = await baileys.fetchLatestBaileysVersion();
 
-  const sock = baileys.makeWASocket({
+  const sock = baileys.default({
     version,
     printQRInTerminal: !usarCodigo && !fs.existsSync(credsPath),
     logger: pino({ level: "silent" }),
     auth: {
       creds: state.creds,
-      keys: baileys.makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
+      keys: baileys.makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }))
     },
-    browser: ["Ubuntu", "Chrome", "108.0.5359.125"],
+    browser: ["Ubuntu", "Chrome", "108.0.5359.125"]
   });
 
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
-    const code = lastDisconnect?.error?.output?.statusCode;
+    const code = (lastDisconnect?.error)?.output?.statusCode;
     if (connection === "open") {
       console.log(chalk.greenBright("✅ ¡Conectado correctamente!"));
     }
@@ -75,15 +76,22 @@ async function iniciarBot() {
       if (!msg.message || msg.key.fromMe) continue;
 
       const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-      if (!texto || !texto.startsWith(config.prefijo)) continue;
+      if (!texto) continue;
+
+      // Mostrar mensaje recibido en consola
+      console.log(`[📩] ${msg.key.remoteJid} > ${texto}`);
+
+      if (!texto.startsWith(config.prefijo)) continue;
 
       const [cmd, ...args] = texto.slice(config.prefijo.length).trim().split(/\s+/);
+      const comando = cmd.toLowerCase();
 
-      // Ejecutar comando desde main.js que usa switch-case
+      // Llamar a la función comandos() del main.js
       try {
-        await comandos(sock, msg, cmd.toLowerCase(), args);
+        await comandos(sock, msg, comando, args);
       } catch (e) {
-        console.log(chalk.red(`Error ejecutando comando ${cmd}:`), e);
+        console.log(chalk.red("[❌ ERROR AL EJECUTAR COMANDO]"), e);
+        await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Ocurrió un error al ejecutar el comando." }, { quoted: msg });
       }
     }
   });
