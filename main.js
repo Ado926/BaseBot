@@ -74,49 +74,45 @@ export default async function comandos(sock, msg, cmd, args) {
       await sock.sendMessage(msg.key.remoteJid, { text: "Función descargar aún no implementada." }, { quoted: msg });
       break;
 
-    case "sticker":
+case "sticker":
   try {
     const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-    if (!quoted) {
+    if (!quoted || (!quoted.imageMessage && !quoted.videoMessage)) {
       await sock.sendMessage(
         msg.key.remoteJid,
-        { text: "📸 *Responde a una imagen o video para convertirlo en sticker.*" },
+        { text: "📌 Responde a una *imagen* o *video corto* para convertirlo en sticker." },
         { quoted: msg }
       );
       return;
     }
 
-    let mime;
-    let mediaType;
-
-    if (quoted.imageMessage) {
-      mime = quoted.imageMessage.mimetype;
-      mediaType = "image";
-    } else if (quoted.videoMessage) {
-      mime = quoted.videoMessage.mimetype;
-      mediaType = "video";
-    } else {
-      await sock.sendMessage(
-        msg.key.remoteJid,
-        { text: "⚠ *Solo se permiten imágenes o videos de máximo 10 segundos.*" },
-        { quoted: msg }
-      );
-      return;
-    }
-
-    const mediaMessage = {
-      [mediaType]: quoted[`${mediaType}Message`],
+    const mediaType = quoted.imageMessage ? "imageMessage" : "videoMessage";
+    const quotedMsg = {
+      key: {
+        remoteJid: msg.key.remoteJid,
+        id: msg.message.extendedTextMessage.contextInfo.stanzaId,
+        fromMe: false,
+        participant: msg.message.extendedTextMessage.contextInfo.participant,
+      },
+      message: {
+        [mediaType]: quoted[mediaType]
+      }
     };
 
-    const mediaBuffer = await sock.downloadMediaMessage({ message: mediaMessage });
+    const mediaBuffer = await downloadMediaMessage(
+      quotedMsg,
+      "buffer",
+      {},
+      { logger: console, reuploadRequest: sock.reuploadRequest, getAuth: () => sock.authState }
+    );
 
     await sock.sendMessage(
       msg.key.remoteJid,
       {
         sticker: mediaBuffer,
-        packname: "BaseBot 🌸",
-        author: "By Wirk",
+        packname: "MaiBot 🌸",
+        author: "by Wirk"
       },
       { quoted: msg }
     );
