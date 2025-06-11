@@ -1,91 +1,85 @@
-# BaseBot de WhatsApp en JavaScript
+# Michi Base Bot 🚀
 
-Un bot de WhatsApp multifuncional desarrollado en JavaScript, utilizando `@whiskeysockets/baileys`.
-
-## Características Principales
-
-*   **Descarga de Música**: Descarga audio directamente desde YouTube usando URLs o búsqueda por nombre.
-*   **Creación de Stickers**: Convierte imágenes, videos y GIFs en stickers de WhatsApp.
-*   **Comandos Dinámicos**: Fácil de extender con nuevos comandos.
-*   **Configurable**: Permite cambiar el prefijo de los comandos.
-*   **Múltiples Métodos de Vinculación**: Soporta conexión mediante código QR y código de 8 dígitos.
-
-## Requisitos Previos
-
-*   **Node.js**: Versión 16.x o superior recomendada.
-*   **npm**: Generalmente se instala junto con Node.js.
-*   **ffmpeg**: Esencial para la creación de stickers a partir de videos/GIFs y para la conversión de audio en el comando `!descargar`. Asegúrate de que `ffmpeg` esté instalado y accesible en el PATH de tu sistema. Puedes descargarlo desde [ffmpeg.org](https://ffmpeg.org/download.html).
-
-## Instalación
-
-1.  **Clona el repositorio (o descarga los archivos)**:
-    ```bash
-    # Si es un repo git (ejemplo)
-    # git clone https://tu-repositorio-url.git
-    # cd nombre-del-directorio-del-bot
-    ```
-    Si solo tienes los archivos, simplemente colócalos en una carpeta.
-
-2.  **Instala las dependencias**:
-    Abre una terminal en el directorio del bot y ejecuta:
-    ```bash
-    npm install
-    ```
-
-## Configuración
-
-Puedes configurar el prefijo de los comandos editando el archivo `config.js`:
-
-```javascript
-// config.js
-export default {
-  prefijo: '!' // Cambia '!' por el prefijo que desees
-};
-```
-
-## Ejecución
-
-1.  **Inicia el bot**:
-    *   Para un uso normal/producción:
-        ```bash
-        npm start
-        ```
-    *   Para desarrollo (se reiniciará automáticamente con los cambios en `bot.js`):
-        ```bash
-        npm run dev
-        ```
-
-2.  **Vincula con WhatsApp**:
-    *   La primera vez que ejecutes el bot, se te pedirá que elijas un método de vinculación:
-        *   **Código QR**: Se mostrará un código QR en la terminal. Escanéalo con WhatsApp en tu teléfono (Ajustes > Dispositivos Vinculados > Vincular un dispositivo).
-        *   **Código de 8 dígitos**: Si eliges esta opción, se te pedirá tu número de WhatsApp. Luego, se generará un código de 8 dígitos que deberás ingresar en WhatsApp en tu teléfono (Ajustes > Dispositivos Vinculados > Vincular un dispositivo > Vincular con número de teléfono).
-    *   Una vez vinculado, se guardará una sesión en la carpeta `sesion_auth/`. En los siguientes inicios, el bot intentará usar la sesión guardada. Si la sesión es inválida o se cierra sesión desde el teléfono, puede que necesites vincularlo de nuevo.
-
-## Lista de Comandos
-
-Aquí están los comandos disponibles (el prefijo por defecto es `!` según `config.js`):
-
-*   **`!ping`**
-    *   Descripción: Verifica si el bot está en línea y responde "Pong!".
-    *   Uso: `!ping`
-
-*   **`!descargar <URL de YouTube o nombre de canción>`**
-    *   Descripción: Descarga audio de YouTube por URL o búsqueda por nombre.
-    *   Uso:
-        *   `!descargar https://www.youtube.com/watch?v=VIDEO_ID`
-        *   `!descargar Nombre de la Canción Artista`
-
-*   **`!sticker`**
-    *   Descripción: Convierte imágenes/videos/GIFs a stickers. Responde a un mensaje con media o envía media con `!sticker` como caption.
-    *   Uso:
-        *   Responde a una imagen/video/GIF con el mensaje `!sticker`.
-        *   Envía una imagen/video/GIF con el texto `!sticker` en el pie de foto/video.
-    *   Nota: Los videos/GIFs para stickers animados tienen una duración máxima de 7 segundos.
-
-*   **`!ayuda`**
-    *   Descripción: Muestra la lista de todos los comandos disponibles y sus descripciones.
-    *   Uso: `!ayuda`
+![Michi Base Bot Menu](https://raw.githubusercontent.com/Ado926/WirksiBoxFiles/main/1749661095010-fyrz5r-1749661072633-fd9d32.jpg)
 
 ---
 
-Desarrollado con ❤️ por Jules (asistente de IA).
+Michi Base Bot es un bot funcional desde cero, pensado para ofrecer una base sólida y escalable con comandos esenciales.  
+Diseñado para desarrolladores que quieren un punto de partida eficiente y modular. ¡Pronto se añadirán más funcionalidades avanzadas para potenciar tu experiencia!
+
+---
+
+## 📚 Características clave
+
+- **Código limpio y modular** para facilitar personalizaciones y ampliaciones.  
+- **Comandos básicos pero esenciales**, listos para usar y comprender.  
+- **Base escalable:** ideal para añadir nuevas funcionalidades sin complicaciones.  
+- **Documentación clara y práctica** para una integración rápida.  
+- **Soporte para multimedia:** stickers, música, videos TikTok, y más.  
+- **Fácil configuración** con variables de entorno para proteger credenciales.
+
+---
+
+## 🚀 Comandos Disponibles
+
+| Comando         | Descripción                                     |
+|-----------------|------------------------------------------------|
+| `ping`          | Verifica que el bot está activo respondiendo "pong". |
+| `sticker`       | Convierte una imagen o video en sticker.       |
+| `play`          | Reproduce música desde una URL o palabra clave.|
+| `play2`         | Alternativa para reproducir música con otro método. |
+| `tiktok <URL>`  | Descarga videos de TikTok mediante URL.        |
+
+---
+
+## 🛠️ Instalación paso a paso
+
+Sigue esta guía rápida para poner en marcha Michi Base Bot:
+
+```bash
+# 1. Clona el repositorio
+git clone https://github.com/Ado926/MichiBaseBot.git
+
+# 2. Entra al directorio del proyecto
+cd MichiBaseBot
+
+# 3. Instala las dependencias necesarias
+npm install
+
+# 4. Inicia el bot
+npm install
+```
+
+---
+
+## 💡 Buenas prácticas
+
+- **Mantén tu bot actualizado**: usa el comando `update` para obtener mejoras directas desde GitHub.  
+- **Resguarda tus tokens y datos sensibles** en `.env`, nunca los subas a repositorios públicos.  
+- **Extiende los comandos fácilmente:** el código está documentado para agregar nuevas funcionalidades sin dolor.  
+- **Monitorea el rendimiento** y logs para anticipar errores y optimizar el bot.
+
+---
+⚔️ Próximamente mas mejoras :D
+---
+
+## 🙌 Créditos
+
+**Michi Base Bot** fue creado con ❤️ por [Ado926](https://github.com/Ado926).
+
+Este proyecto está inspirado en las mejores prácticas y busca ser un estándar para bots WhatsApp base en Node.js.
+
+---
+
+## 📜 Licencia
+
+MIT License © 2025 Ado926
+
+---
+
+## 🎉 Gracias por usar Michi Base Bot
+
+Si te gustó el proyecto, no olvides ⭐ darle en GitHub y compartirlo con la comunidad.  
+Para soporte y novedades, sígueme en GitHub: [github.com/Ado926](https://github.com/Ado926)
+
+---
