@@ -192,70 +192,77 @@ case 'play2':
 case 'mp4':
 case 'ytmp4':
 case 'playmp4': {
+  const fetch = (await import('node-fetch')).default;
+
+  const decryptBase64 = (str) => Buffer.from(str, 'base64').toString();
+  const searchAPI = decryptBase64('aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L3NlYXJjaF95b3V0dWJlP3F1ZXJ5PQ==');
+  const downloadAPI = decryptBase64('aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L2Rvd25sb2FkX3ZpZGVvP3VybD0=');
+
   const text = msg.body?.split(' ').slice(1).join(' ').trim();
   if (!text) {
-    await conn.sendMessage(msg.chat, { text: '🔍 Ingresa el nombre del video. Ejemplo: .play2 Usewa Ado' }, { quoted: msg });
-    return;
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: '🔍 *Ingresa el nombre del video.*\n\n📌 Ejemplo:\n.play2 Usewa Ado'
+    }, { quoted: msg });
+    break;
   }
 
   try {
-    const ENCRYPTED_SEARCH_API = 'aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L3NlYXJjaF95b3V0dWJlP3F1ZXJ5PQ==';
-    const ENCRYPTED_DOWNLOAD_VIDEO_API = 'aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L2Rvd25sb2FkX3ZpZGVvP3VybD0=';
+    const res = await fetch(`${searchAPI}${encodeURIComponent(text)}`);
+    const json = await res.json();
 
-    function decryptBase64(str) {
-      return Buffer.from(str, 'base64').toString();
+    if (!json.results || !json.results.length) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: '⚠️ No se encontraron resultados para tu búsqueda.'
+      }, { quoted: msg });
+      break;
     }
 
-    const searchAPI = decryptBase64(ENCRYPTED_SEARCH_API);
-    const downloadVideoAPI = decryptBase64(ENCRYPTED_DOWNLOAD_VIDEO_API);
-
-    const searchRes = await fetch(`${searchAPI}${encodeURIComponent(text)}`);
-    const searchJson = await searchRes.json();
-
-    if (!searchJson.results || !searchJson.results.length) {
-      await conn.sendMessage(msg.chat, { text: '⚠️ No se encontraron resultados para tu búsqueda.' }, { quoted: msg });
-      return;
-    }
-
-    const video = searchJson.results[0];
+    const video = json.results[0];
     const thumb = video.thumbnails.find(t => t.width === 720)?.url || video.thumbnails[0]?.url;
-    const videoTitle = video.title;
-    const videoUrl = video.url;
+    const title = video.title;
+    const url = video.url;
     const duration = Math.floor(video.duration);
+    const views = video.views;
 
-    const caption = `
-🎬 *${videoTitle}*
+    const info = `
+🎬 *Título:* ${title}
 📺 *Canal:* ${video.channel}
 ⏱️ *Duración:* ${duration}s
-👀 *Vistas:* ${video.views.toLocaleString()}
-🔗 *URL:* ${videoUrl}
-📥 Enviando video, un momento... (˶˃ ᵕ ˂˶)
-`.trim();
+👀 *Vistas:* ${views.toLocaleString()}
+🔗 *URL:* ${url}
+Enviando video, un momento… (˶˃ ᵕ ˂˶)
+    `.trim();
 
-    await conn.sendMessage(msg.chat, { image: { url: thumb }, caption }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      image: { url: thumb },
+      caption: info
+    }, { quoted: msg });
 
-    const downloadRes = await fetch(`${downloadVideoAPI}${encodeURIComponent(videoUrl)}`);
-    const downloadJson = await downloadRes.json();
+    const down = await fetch(`${downloadAPI}${encodeURIComponent(url)}`);
+    const downJson = await down.json();
 
-    if (!downloadJson.file_url) {
-      await conn.sendMessage(msg.chat, { text: '❌ No se pudo descargar el video.' }, { quoted: msg });
-      return;
+    if (!downJson.file_url) {
+      await sock.sendMessage(msg.key.remoteJid, {
+        text: '❌ No se pudo descargar el video.'
+      }, { quoted: msg });
+      break;
     }
 
-    await conn.sendMessage(msg.chat, {
-      video: { url: downloadJson.file_url },
+    await sock.sendMessage(msg.key.remoteJid, {
+      video: { url: downJson.file_url },
       mimetype: 'video/mp4',
-      fileName: `${downloadJson.title}.mp4`
+      fileName: `${downJson.title}.mp4`
     }, { quoted: msg });
 
   } catch (err) {
     console.error(err);
-    await conn.sendMessage(msg.chat, { text: '❌ Error al procesar tu solicitud.' }, { quoted: msg });
+    await sock.sendMessage(msg.key.remoteJid, {
+      text: '❌ Ocurrió un error al procesar el comando.'
+    }, { quoted: msg });
   }
 
   break;
-}
-    
+}    
     case "play":
       if (!args.length) {
         await sock.sendMessage(
