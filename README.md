@@ -32,7 +32,7 @@
 </p>
 
 > 💬 **GitHub:** [Ado926](https://github.com/Ado926)  
-> 🧠 Developer rebelde que no teme empezar desde cero 💥
+> 🧠 Developer manquito que le sale todo mal XD 💥
 
 ---
 
