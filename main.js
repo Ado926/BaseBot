@@ -73,7 +73,7 @@ export default async function comandos(sock, msg, cmd, args) {
       );
       break;
       
-case 'update':
+      case 'update':
 case 'actualizar': {
   await sock.sendMessage(msg.key.remoteJid, { text: '🔄 Actualizando el bot desde GitHub...' }, { quoted: msg });
 
@@ -92,7 +92,7 @@ case 'actualizar': {
     }
   });
   break;
-      
+}
     case "descargar":
       await sock.sendMessage(
         msg.key.remoteJid,
