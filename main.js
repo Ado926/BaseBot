@@ -1,4 +1,5 @@
 import path from "path";
+import { exec } from "child_process";
 import ffmpeg from "fluent-ffmpeg";
 import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import fs from "fs";
@@ -71,7 +72,10 @@ export default async function comandos(sock, msg, cmd, args) {
         { quoted: msg }
       );
       break;
-    case "gitpull":
+      
+case "gitpull":
+case "update":
+case "actualizar":
   exec("git pull", (error, stdout, stderr) => {
     if (error) {
       sock.sendMessage(msg.key.remoteJid, { text: `❌ Error al hacer git pull:\n${error.message}` }, { quoted: msg });
