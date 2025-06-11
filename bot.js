@@ -1,75 +1,98 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import makeWASocket, {
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  generatePairingCode,
+  requestPairingCode,
+} from '@whiskeysockets/baileys'
+import { boom } from '@hapi/boom'
+import qrcode from 'qrcode-terminal'
+import readline from 'readline'
 
-import pkg from '@whiskeysockets/baileys';
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = pkg;
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+})
 
-// Para __dirname en ESModules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ruta para guardar la sesión
-const SESSION_DIR = path.join(__dirname, 'session');
-
-async function iniciarBot() {
-  // Crear carpeta de sesión si no existe
-  if (!fs.existsSync(SESSION_DIR)) {
-    fs.mkdirSync(SESSION_DIR);
-  }
-
-  // Usar MultiFileAuthState para manejar la sesión (baileys recomienda esto)
-  const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-
-  // Crear socket (cliente WhatsApp)
-  const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: false, // No imprimir QR en consola, porque lo manejamos a mano
-  });
-
-  // Eventos para imprimir QR o reconexión
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      console.log('Escanea este código QR con WhatsApp:');
-      console.log(qr);
-      // Aquí puedes usar algún paquete para mostrar QR en consola si quieres
-    }
-
-    if (connection === 'close') {
-      const statusCode = (lastDisconnect.error)?.output?.statusCode;
-      if (statusCode === DisconnectReason.loggedOut) {
-        console.log('Sesión cerrada por logout. Borra la carpeta session y vuelve a iniciar.');
-      } else {
-        console.log('Conexión cerrada inesperadamente, intentando reconectar...');
-        iniciarBot(); // Reintentar conexión
-      }
-    } else if (connection === 'open') {
-      console.log('¡Bot conectado correctamente!');
-    }
-  });
-
-  sock.ev.on('creds.update', saveCreds);
-
-  // Aquí carga tus comandos o escucha mensajes...
-
-  // Ejemplo simple: responder a "!ping"
-  sock.ev.on('messages.upsert', async (m) => {
-    try {
-      const msg = m.messages[0];
-      if (!msg.message || msg.key.fromMe) return;
-
-      const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-
-      if (text === '!ping') {
-        await sock.sendMessage(msg.key.remoteJid, { text: 'pong' });
-      }
-    } catch (e) {
-      console.error('Error al procesar mensaje:', e);
-    }
-  });
+async function questionAsync(query) {
+  return new Promise(resolve => rl.question(query, resolve))
 }
 
-// Ejecutar la función principal
-iniciarBot().catch(console.error);
+async function iniciarBot() {
+  // Carga o crea archivo para guardar sesión
+  const { state, saveCreds } = await useMultiFileAuthState('./auth_info')
+
+  // Obtiene la última versión de baileys para mejor compatibilidad
+  const { version, isLatest } = await fetchLatestBaileysVersion()
+  console.log(`Usando Baileys v${version.join('.')} (última: ${isLatest})`)
+
+  // Preguntar cómo conectar
+  let metodo = await questionAsync('¿Cómo deseas conectar? (1: QR, 2: Código de 8 dígitos): ')
+
+  // Crea el socket con la sesión y versión
+  const sock = makeWASocket({
+    version,
+    printQRInTerminal: false, // No mostrar QR automático, lo haremos manual
+    auth: state,
+  })
+
+  sock.ev.on('creds.update', saveCreds)
+
+  // Escucha eventos de conexión
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect, qr } = update
+
+    if (qr) {
+      qrcode.generate(qr, { small: true })
+      console.log('Escanea el código QR arriba para conectar el bot.')
+    }
+
+    if(connection === 'close') {
+      const statusCode = (lastDisconnect?.error as boom.Boom)?.output?.statusCode
+      console.log('Conexión cerrada, código:', statusCode)
+      if(statusCode === 401) {
+        console.log('Sesión inválida. Borra carpeta auth_info para reiniciar sesión.')
+      }
+    } else if(connection === 'open') {
+      console.log('Conectado correctamente al servidor WhatsApp!')
+    }
+  })
+
+  if(metodo === '2') {
+    // Pide número con código país
+    let numero = await questionAsync('Número WhatsApp con código país (ej: 521XXXXXXXXXX): ')
+    numero = numero.trim()
+
+    try {
+      // Solicitar código de emparejamiento (pairing code)
+      const pairingCode = await requestPairingCode(sock, numero)
+
+      console.log(`Código de emparejamiento recibido para ${numero}: ${pairingCode}`)
+
+      console.log('Entra el código de 8 dígitos que te mostró WhatsApp para emparejar:')
+      const codigoUsuario = await questionAsync('Código: ')
+
+      // Completa el emparejamiento con el código que ingresó el usuario
+      await sock.verifyPairingCode(codigoUsuario.trim())
+
+      console.log('Emparejamiento exitoso! Bot conectado.')
+    } catch (err) {
+      console.error('Error solicitando código de emparejamiento:', err)
+      console.log('Se intentará conectar por QR en su lugar...')
+    }
+  }
+
+  // Espera a mensajes o eventos (ejemplo)
+  sock.ev.on('messages.upsert', ({ messages }) => {
+    const msg = messages[0]
+    if(!msg.message || msg.key.fromMe) return
+
+    const text = msg.message.conversation || msg.message?.extendedTextMessage?.text || ''
+    console.log('Mensaje recibido:', text)
+
+    if(text.toLowerCase() === 'ping') {
+      sock.sendMessage(msg.key.remoteJid, { text: 'pong' })
+    }
+  })
+}
+
+iniciarBot()
