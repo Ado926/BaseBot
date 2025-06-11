@@ -1,16 +1,19 @@
-import makeWASocket, {
+import baileys from '@whiskeysockets/baileys';
+const {
+  default: makeWASocket,
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  WAMessage, // Importar tipos relevantes
-  WASocket // Importar tipos relevantes
-} from '@whiskeysockets/baileys';
+  WAMessage,
+  WASocket
+} = baileys;
+
 import pino from 'pino';
 import qrTerminal from 'qrcode-terminal';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import config from './config.js';
-import path from 'path'; // Necesario para manejar rutas de archivos
+import path from 'path';
 import { fileURLToPath } from 'url'; // Para obtener __dirname en ES Modules
 
 const SESSION_DIR = './sesion_auth/';
