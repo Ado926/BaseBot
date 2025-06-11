@@ -192,8 +192,11 @@ case 'play2':
 case 'mp4':
 case 'ytmp4':
 case 'playmp4': {
-  const text = msg.body?.split(' ')?.slice(1)?.join(' ')?.trim();
-  if (!text) return msg.reply('🔍 Ingresa el nombre del video. Ejemplo: .play2 Usewa Ado');
+  const text = msg.body?.split(' ').slice(1).join(' ').trim();
+  if (!text) {
+    await conn.sendMessage(msg.chat, { text: '🔍 Ingresa el nombre del video. Ejemplo: .play2 Usewa Ado' }, { quoted: msg });
+    return;
+  }
 
   try {
     const ENCRYPTED_SEARCH_API = 'aHR0cDovLzE3My4yMDguMjAwLjIyNzozMjY5L3NlYXJjaF95b3V0dWJlP3F1ZXJ5PQ==';
@@ -210,7 +213,8 @@ case 'playmp4': {
     const searchJson = await searchRes.json();
 
     if (!searchJson.results || !searchJson.results.length) {
-      return msg.reply('⚠️ No se encontraron resultados para tu búsqueda.');
+      await conn.sendMessage(msg.chat, { text: '⚠️ No se encontraron resultados para tu búsqueda.' }, { quoted: msg });
+      return;
     }
 
     const video = searchJson.results[0];
@@ -219,21 +223,24 @@ case 'playmp4': {
     const videoUrl = video.url;
     const duration = Math.floor(video.duration);
 
-    const msgInfo = `
-🎬 Título: ${videoTitle}
-📺 Canal: ${video.channel}
-⏱️ Duración: ${duration}s
-👀 Vistas: ${video.views.toLocaleString()}
-🔗 URL: ${videoUrl}
-Enviando video un momento...
-    `.trim();
+    const caption = `
+🎬 *${videoTitle}*
+📺 *Canal:* ${video.channel}
+⏱️ *Duración:* ${duration}s
+👀 *Vistas:* ${video.views.toLocaleString()}
+🔗 *URL:* ${videoUrl}
+📥 Enviando video, un momento... (˶˃ ᵕ ˂˶)
+`.trim();
 
-    await conn.sendMessage(msg.chat, { image: { url: thumb }, caption: msgInfo }, { quoted: msg });
+    await conn.sendMessage(msg.chat, { image: { url: thumb }, caption }, { quoted: msg });
 
     const downloadRes = await fetch(`${downloadVideoAPI}${encodeURIComponent(videoUrl)}`);
     const downloadJson = await downloadRes.json();
 
-    if (!downloadJson.file_url) return msg.reply('❌ No se pudo descargar el video.');
+    if (!downloadJson.file_url) {
+      await conn.sendMessage(msg.chat, { text: '❌ No se pudo descargar el video.' }, { quoted: msg });
+      return;
+    }
 
     await conn.sendMessage(msg.chat, {
       video: { url: downloadJson.file_url },
@@ -241,12 +248,14 @@ Enviando video un momento...
       fileName: `${downloadJson.title}.mp4`
     }, { quoted: msg });
 
-  } catch (e) {
-    console.error(e);
-    msg.reply('❌ Error al procesar tu solicitud.');
+  } catch (err) {
+    console.error(err);
+    await conn.sendMessage(msg.chat, { text: '❌ Error al procesar tu solicitud.' }, { quoted: msg });
   }
+
   break;
-}      
+}
+    
     case "play":
       if (!args.length) {
         await sock.sendMessage(
