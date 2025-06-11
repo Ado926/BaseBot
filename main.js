@@ -75,7 +75,7 @@ case "menu":
     msg.key.remoteJid,
     {
       image: { url: "https://raw.githubusercontent.com/Ado926/WirksiBoxFiles/main/1749661095010-fyrz5r-1749661072633-fd9d32.jpg" },
-      caption: `>⚔️ Michi Bot Base\n 📜 *Lista de comandos disponibles:*\n\n• ping\n• descargar [ en desarrollo ]\n• sticker\n• play\n• play2\n• tiktok <URL>\n\n> 🍫 Michi Base Bot 2025 | Made With Wirk 🍟`
+      caption: `> ⚔️ Michi Bot Base\n 📜 *Lista de comandos disponibles:*\n\n• ping\n• descargar [ en desarrollo ]\n• sticker\n• play\n• play2\n• tiktok <URL>\n\n> 🍫 Michi Base Bot 2025 | Made With Wirk 🍟`
     },
     { quoted: msg }
   );
