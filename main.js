@@ -66,7 +66,7 @@ export default async function comandos(sock, msg, cmd, args) {
   await sock.sendMessage(msg.key.remoteJid, { text: msgPing }, { quoted: msg });
   const end = performance.now();
   const ping = Math.floor(end - start);
-  await sock.sendMessage(msg.key.remoteJid, { text: `🔄 *Latencia actual:* ${ping}ms` }, { quoted: msg });
+  await sock.sendMessage(msg.key.remoteJid, { text: `⚔️ *Latencia actual:* ${ping}ms` }, { quoted: msg });
   break;
 }
 
