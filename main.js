@@ -82,6 +82,22 @@ case "menu":
   );
   break;
 
+      case 'xd': {
+  const buttons = [
+    { buttonId: 'boton1', buttonText: { displayText: 'Botón 1' }, type: 1 },
+    { buttonId: 'boton2', buttonText: { displayText: 'Botón 2' }, type: 1 },
+    { buttonId: 'boton3', buttonText: { displayText: 'Botón 3' }, type: 1 }
+  ];
+
+  const buttonMessage = {
+    text: 'xd',
+    buttons: buttons,
+    headerType: 1
+  };
+
+  await sock.sendMessage(msg.key.remoteJid, buttonMessage, { quoted: msg });
+  break;
+      }
       
  case 'update':
 case 'actualizar': {
