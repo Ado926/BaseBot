@@ -192,6 +192,7 @@ case 'play2':
 case 'mp4':
 case 'ytmp4':
 case 'playmp4': {
+  const text = msg.body?.split(' ')?.slice(1)?.join(' ')?.trim();
   if (!text) return msg.reply('🔍 Ingresa el nombre del video. Ejemplo: .play2 Usewa Ado');
 
   try {
@@ -205,7 +206,6 @@ case 'playmp4': {
     const searchAPI = decryptBase64(ENCRYPTED_SEARCH_API);
     const downloadVideoAPI = decryptBase64(ENCRYPTED_DOWNLOAD_VIDEO_API);
 
-    // Buscar video
     const searchRes = await fetch(`${searchAPI}${encodeURIComponent(text)}`);
     const searchJson = await searchRes.json();
 
@@ -225,12 +225,11 @@ case 'playmp4': {
 ⏱️ Duración: ${duration}s
 👀 Vistas: ${video.views.toLocaleString()}
 🔗 URL: ${videoUrl}
-Enviando video un momento..
+Enviando video un momento...
     `.trim();
 
     await conn.sendMessage(msg.chat, { image: { url: thumb }, caption: msgInfo }, { quoted: msg });
 
-    // Descargar video
     const downloadRes = await fetch(`${downloadVideoAPI}${encodeURIComponent(videoUrl)}`);
     const downloadJson = await downloadRes.json();
 
@@ -247,8 +246,7 @@ Enviando video un momento..
     msg.reply('❌ Error al procesar tu solicitud.');
   }
   break;
-}
-      
+}      
     case "play":
       if (!args.length) {
         await sock.sendMessage(
