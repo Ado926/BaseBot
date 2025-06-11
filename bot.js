@@ -1,98 +1,85 @@
-import makeWASocket, {
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  generatePairingCode,
-  requestPairingCode,
-} from '@whiskeysockets/baileys'
-import { boom } from '@hapi/boom'
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys'
 import qrcode from 'qrcode-terminal'
+import fs from 'fs'
 import readline from 'readline'
 
+// Para leer entrada en consola
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 })
 
-async function questionAsync(query) {
-  return new Promise(resolve => rl.question(query, resolve))
-}
-
 async function iniciarBot() {
-  // Carga o crea archivo para guardar sesión
+  // Usa auth_state para guardar sesión
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info')
 
-  // Obtiene la última versión de baileys para mejor compatibilidad
-  const { version, isLatest } = await fetchLatestBaileysVersion()
-  console.log(`Usando Baileys v${version.join('.')} (última: ${isLatest})`)
-
-  // Preguntar cómo conectar
-  let metodo = await questionAsync('¿Cómo deseas conectar? (1: QR, 2: Código de 8 dígitos): ')
-
-  // Crea el socket con la sesión y versión
+  // Crear socket
   const sock = makeWASocket({
-    version,
-    printQRInTerminal: false, // No mostrar QR automático, lo haremos manual
     auth: state,
+    printQRInTerminal: false, // no mostrar QR aquí, lo haremos manualmente
+    browser: ['Ubuntu', 'Chrome', '22.04.4']
   })
 
+  // Guardar credenciales automáticamente
   sock.ev.on('creds.update', saveCreds)
 
-  // Escucha eventos de conexión
-  sock.ev.on('connection.update', async (update) => {
+  // Manejo conexión
+  sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update
 
-    if (qr) {
+    if(qr) {
+      console.log('Escanea este código QR con WhatsApp:')
       qrcode.generate(qr, { small: true })
-      console.log('Escanea el código QR arriba para conectar el bot.')
     }
 
     if(connection === 'close') {
-      const statusCode = (lastDisconnect?.error as boom.Boom)?.output?.statusCode
+      const statusCode = lastDisconnect?.error?.output?.statusCode
       console.log('Conexión cerrada, código:', statusCode)
-      if(statusCode === 401) {
-        console.log('Sesión inválida. Borra carpeta auth_info para reiniciar sesión.')
+      if(statusCode === DisconnectReason.loggedOut) {
+        console.log('Sesión cerrada, elimina carpeta auth_info para reiniciar sesión.')
       }
     } else if(connection === 'open') {
       console.log('Conectado correctamente al servidor WhatsApp!')
     }
   })
 
-  if(metodo === '2') {
-    // Pide número con código país
-    let numero = await questionAsync('Número WhatsApp con código país (ej: 521XXXXXXXXXX): ')
-    numero = numero.trim()
-
-    try {
-      // Solicitar código de emparejamiento (pairing code)
-      const pairingCode = await requestPairingCode(sock, numero)
-
-      console.log(`Código de emparejamiento recibido para ${numero}: ${pairingCode}`)
-
-      console.log('Entra el código de 8 dígitos que te mostró WhatsApp para emparejar:')
-      const codigoUsuario = await questionAsync('Código: ')
-
-      // Completa el emparejamiento con el código que ingresó el usuario
-      await sock.verifyPairingCode(codigoUsuario.trim())
-
-      console.log('Emparejamiento exitoso! Bot conectado.')
-    } catch (err) {
-      console.error('Error solicitando código de emparejamiento:', err)
-      console.log('Se intentará conectar por QR en su lugar...')
-    }
-  }
-
-  // Espera a mensajes o eventos (ejemplo)
-  sock.ev.on('messages.upsert', ({ messages }) => {
-    const msg = messages[0]
-    if(!msg.message || msg.key.fromMe) return
-
-    const text = msg.message.conversation || msg.message?.extendedTextMessage?.text || ''
-    console.log('Mensaje recibido:', text)
-
-    if(text.toLowerCase() === 'ping') {
-      sock.sendMessage(msg.key.remoteJid, { text: 'pong' })
+  // Preguntar forma de conectar
+  rl.question('¿Cómo deseas conectar? (1: QR, 2: Código de 8 dígitos): ', async (modo) => {
+    if(modo.trim() === '1') {
+      // Solo esperamos QR y conexión
+      console.log('Por favor escanea el QR que aparecerá en consola.')
+    } else if(modo.trim() === '2') {
+      // Código de 8 dígitos (parece que la función es requestPairingCode)
+      rl.question('Número WhatsApp con código país (ej: 521XXXXXXXXXX): ', async (numero) => {
+        try {
+          console.log('Solicitando código de emparejamiento...')
+          const res = await sock.requestPairingCode(numero.trim())
+          console.log('Código de emparejamiento enviado. Revise su WhatsApp.')
+          rl.question('Ingresa el código de 8 dígitos recibido: ', async (codigo8) => {
+            try {
+              await sock.acceptPairingCode(codigo8.trim())
+              console.log('Conectado con éxito usando código de 8 dígitos!')
+              rl.close()
+            } catch(e) {
+              console.error('Error al aceptar código:', e)
+              rl.close()
+            }
+          })
+        } catch(e) {
+          console.error('Error al solicitar código de emparejamiento:', e)
+          rl.close()
+        }
+      })
+    } else {
+      console.log('Opción inválida, cerrando...')
+      rl.close()
+      process.exit(0)
     }
   })
+
+  // Puedes agregar aquí la carga de comandos y eventos de mensajes
+
+  return sock
 }
 
-iniciarBot()
+iniciarBot().catch(e => console.error('Error iniciando bot:', e))
