@@ -93,31 +93,31 @@ export default async function comandos(sock, msg, cmd, args) {
         const video = search.all[0];
         const { title, thumbnail, timestamp, views, ago, url } = video;
 
-        const infoMessage = `🎵 *Resultado encontrado:*\n\n📌 *Título:* ${title}\n📅 *Publicado:* ${ago}\n⏱️ *Duración:* ${timestamp}\n👀 *Vistas:* ${views.toLocaleString()}\n🔗 *Link:* ${url}`;
+        const infoMessage = {
+          image: { url: thumbnail },
+          caption: `🎵 *Resultado encontrado:*\n\n📌 *Título:* ${title}\n📅 *Publicado:* ${ago}\n⏱️ *Duración:* ${timestamp}\n👀 *Vistas:* ${views.toLocaleString()}\n🔗 *Link:* ${url}`
+        };
 
-        await sock.sendMessage(msg.key.remoteJid, { text: infoMessage }, { quoted: msg });
+        // Enviar reacción ✅ rápido
+        await sock.sendMessage(msg.key.remoteJid, { react: { text: "✅", key: msg.key } });
 
+        // Enviar mensaje con info y miniatura
+        await sock.sendMessage(msg.key.remoteJid, infoMessage, { quoted: msg });
+
+        // Descargar audio
         const result = await ddownr.download(url, "mp3");
 
+        // Enviar audio sin contextInfo para rapidez
         await sock.sendMessage(
           msg.key.remoteJid,
           {
             audio: { url: result.downloadUrl },
             mimetype: "audio/mpeg",
             fileName: `${result.title}.mp3`,
-            contextInfo: {
-              externalAdReply: {
-                title: result.title,
-                body: "Descargado por tu bot 🎧",
-                thumbnailUrl: result.image,
-                mediaType: 1,
-                renderLargerThumbnail: true,
-                sourceUrl: url
-              }
-            }
           },
           { quoted: msg }
         );
+
       } catch (error) {
         console.error(error);
         await sock.sendMessage(msg.key.remoteJid, { text: `❌ Ocurrió un error:\n${error.message}` }, { quoted: msg });
