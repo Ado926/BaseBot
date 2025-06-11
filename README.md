@@ -61,7 +61,7 @@ cd BaseBot
 npm install
 
 # Inicia el bot
-npm start
+node index.ts
 
 ```
 > O simplemente haz un fork y listo 👻
