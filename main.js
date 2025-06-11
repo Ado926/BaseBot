@@ -60,11 +60,12 @@ const ddownr = {
 export default async function comandos(sock, msg, cmd, args) {
   switch (cmd) {
     case "ping": {
-  const start = Date.now();
-  const response = await sock.sendMessage(msg.key.remoteJid, { text: "📡 Calculando ping..." }, { quoted: msg });
-  const end = Date.now();
-  const ping = end - start;
-  await sock.sendMessage(msg.key.remoteJid, { text: `🏓 *Pong!* Latencia: *${ping}ms*` }, { quoted: response.key });
+  const start = performance.now(); // Usa performance para más precisión
+  const msgPing = `🏓 *Pong!*`;
+  await sock.sendMessage(msg.key.remoteJid, { text: msgPing }, { quoted: msg });
+  const end = performance.now();
+  const ping = Math.floor(end - start);
+  await sock.sendMessage(msg.key.remoteJid, { text: `🔄 *Latencia actual:* ${ping}ms` }, { quoted: msg });
   break;
 }
 
